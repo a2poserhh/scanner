@@ -5,7 +5,7 @@ import ipaddress
 import argparse
 import logging
 import subprocess
-from logger import setup_logging
+from func.logger import setup_logging
 import time
 
 start_time = datetime.now()
@@ -47,15 +47,26 @@ def scan(target):
 def is_alive(target):
     """Send one ping, return True if the host responds."""
     try:
+        target = str(target)
+
         result = subprocess.run(
             ["ping", "-c", "1", "-W", "1", target],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL
         )
+
         return result.returncode == 0
+    
     except Exception as e:
         logger.error(f"Ping failed: {e}")
         return False
+
+def subnet_scan(target):
+    network = ipaddress.ip_network(target, strict=True) 
+
+    for host in network.hosts():
+        if is_alive(str(host)):
+            print(f"{host} is alive")
 
 def main():
 
@@ -67,6 +78,7 @@ def main():
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("-sn", action="store_true", help="Ping scan: is the host alive?")
     group.add_argument("-sT", action="store_true", help="TCP connect scan: scan all ports")
+    group.add_argument("-s","-subnet", action="store_true", help="Scan a subnet for alive hosts")
 
     args = parser.parse_args()
 
